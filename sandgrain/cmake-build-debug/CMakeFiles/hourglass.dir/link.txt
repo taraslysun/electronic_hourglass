@@ -1,2 +1,0 @@
-/usr/bin/ar qc libhourglass.a CMakeFiles/hourglass.dir/hourglass.c.o CMakeFiles/hourglass.dir/cell.c.o
-/usr/bin/ranlib libhourglass.a
