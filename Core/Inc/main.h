@@ -61,6 +61,8 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define CS_Pin GPIO_PIN_13
 #define CS_GPIO_Port GPIOD
+#define CS2_Pin GPIO_PIN_14
+#define CS2_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
 
