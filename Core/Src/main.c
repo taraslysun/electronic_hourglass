@@ -14,9 +14,17 @@ TIM_HandleTypeDef htim3;
 
 
 
-int graints[8][8] ={{1, 1, 1, 0, 0, 0, 0, 0},
+int graints[16][8] ={{1, 1, 1, 0, 0, 0, 0, 0},
 					{1, 1, 0, 0, 0, 0, 0, 0},
 					{1, 0, 0, 0, 0, 0, 0, 0},
+					{0, 0, 0, 0, 0, 0, 0, 0},
+					{0, 0, 0, 0, 0, 0, 0, 0},
+					{0, 0, 0, 0, 0, 0, 0, 0},
+					{0, 0, 0, 0, 0, 0, 0, 0},
+					{0, 0, 0, 0, 0, 0, 0, 0},
+					{0, 0, 0, 0, 0, 0, 0, 0},
+					{0, 0, 0, 0, 0, 0, 0, 0},
+					{0, 0, 0, 0, 0, 0, 0, 0},
 					{0, 0, 0, 0, 0, 0, 0, 0},
 					{0, 0, 0, 0, 0, 0, 0, 0},
 					{0, 0, 0, 0, 0, 0, 0, 0},
@@ -28,12 +36,16 @@ int toggledGraintsY[] = {0, 0, 0, 1, 1, 2};
 int toggledGraintsX[] = {0, 1, 2, 0, 1, 0};
 
 int size = sizeof toggledGraintsY/ sizeof toggledGraintsY[0];
+
+int current = 0;
+
+
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_SPI1_Init(void);
-void max7219_Transmit(uint8_t address, uint8_t data);
+void max7219_Transmit(int num, uint8_t address, uint8_t data);
 void max7219_Init();
 void renderGraints();
 
@@ -41,56 +53,75 @@ void renderGraints();
 
 
 void renderGraints(){
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < 16; i++) {
 		int data = 0;
 		for (int j = 0; j < 8; j++) {
 			data += graints[i][j] * pow(2, j);
 		}
-		max7219_Transmit(i+1, data);
+
+		if (i < 8) max7219_Transmit(1, i+1, data);
+		else max7219_Transmit(2, i+1-8, data);
 	}
 }
 
-void max7219_Transmit(uint8_t address, uint8_t data){
-	uint8_t tx_buffer[1] = {0};
-	GPIOD->BSRR = (uint32_t)CS_Pin << 16;
-	tx_buffer[0] = address;
-	HAL_SPI_Transmit(&hspi1, tx_buffer, 1, 100);
-	tx_buffer[0] = data;
-	HAL_SPI_Transmit(&hspi1, tx_buffer, 1, 100);
-	GPIOD->BSRR = CS_Pin;
+void max7219_Transmit(int num, uint8_t address, uint8_t data) {
+    uint8_t tx_buffer[1] = {0};
+    if (num == 1) GPIOD->BSRR = (uint32_t)CS_Pin << 16;
+    else GPIOD->BSRR = (uint32_t)CS2_Pin << 16;
+
+    tx_buffer[0] = address;
+    HAL_SPI_Transmit(&hspi1, tx_buffer, 1, 100);
+
+    tx_buffer[0] = data;
+    HAL_SPI_Transmit(&hspi1, tx_buffer, 1, 100);
 
 
+    if (num == 1) GPIOD->BSRR = CS_Pin;
+    else GPIOD->BSRR = CS2_Pin;
 }
 
-void max7219_Display_Clean(void){
-	max7219_Transmit(0x01, 0x00);
-	max7219_Transmit(0x02, 0x00);
-	max7219_Transmit(0x03, 0x00);
-	max7219_Transmit(0x04, 0x00);
-	max7219_Transmit(0x05, 0x00);
-	max7219_Transmit(0x06, 0x00);
-	max7219_Transmit(0x07, 0x00);
-	max7219_Transmit(0x08, 0x00);
+
+void max7219_Display_Clean(int num){
+	max7219_Transmit(num, 0x01, 0x00);
+	max7219_Transmit(num, 0x02, 0x00);
+	max7219_Transmit(num, 0x03, 0x00);
+	max7219_Transmit(num, 0x04, 0x00);
+	max7219_Transmit(num, 0x05, 0x00);
+	max7219_Transmit(num, 0x06, 0x00);
+	max7219_Transmit(num, 0x07, 0x00);
+	max7219_Transmit(num, 0x08, 0x00);
 }
 
 
 void max7219_Init(){
-	max7219_Transmit(0x09, 0x00);
-	max7219_Transmit(0x0A, 0x0F);
-	max7219_Transmit(0x0B, 0x07);
-	max7219_Transmit(0x08, 0x07);
-	max7219_Transmit(0x0C, 0x01);
-	max7219_Transmit(0x0F, 0x01);
+	max7219_Transmit(1, 0x09, 0x00);
+	max7219_Transmit(1, 0x0A, 0x0F);
+	max7219_Transmit(1, 0x0B, 0x07);
+	max7219_Transmit(1, 0x08, 0x07);
+	max7219_Transmit(1, 0x0C, 0x01);
+	max7219_Transmit(1, 0x0F, 0x01);
 
 	HAL_Delay(1000);
-	max7219_Transmit(0x0F, 0x00);
-	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET);
-	max7219_Display_Clean();
+	max7219_Transmit(1, 0x0F, 0x00);
+//
+//	HAL_Delay(1000);
+	max7219_Transmit(2, 0x09, 0x00);
+	max7219_Transmit(2, 0x0A, 0x0F);
+	max7219_Transmit(2, 0x0B, 0x07);
+	max7219_Transmit(2, 0x08, 0x07);
+	max7219_Transmit(2, 0x0C, 0x01);
+	max7219_Transmit(2, 0x0F, 0x00);
 
 	HAL_Delay(1000);
-	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET);
+	max7219_Transmit(2, 0x0F, 0x00);
 
+	max7219_Display_Clean(2);
+	max7219_Display_Clean(1);
+
+	HAL_Delay(1000);
 	renderGraints();
+//	HAL_Delay(1000);
+//	max7219_Transmit(2, 0x01, 0x13);
 
 }
 
@@ -100,8 +131,12 @@ void move(int type, int y, int x, int idx) {
 	int newY;
 	int newX;
 	if (type == 1) {
-		newY = y + 1 < 8 ? y + 1 : y;
-		newX = x + 1 < 8 ? x + 1 : x;
+		newY = (y + 1 != 8 && y+1 < 16) ? y + 1 : y;
+		newX = x + 1 != 8 ? x + 1 : x;
+		if ((y+1 == 8) && (x+1 == 8)) {
+			newY = 8;
+			newX = 0;
+		}
 	} else {
 		newY = y -1 >= 0 ? y -1 : y;
 		newX = x -1 >= 0 ? x - 1 : x;
@@ -113,6 +148,8 @@ void move(int type, int y, int x, int idx) {
 	graints[newY][newX] = 1;
 	toggledGraintsY[idx] = newY;
 	toggledGraintsX[idx] = newX;
+	if (x != newX  || y != newY) renderGraints();
+
 
 }
 
@@ -144,6 +181,7 @@ int main(void)
   }
 }
 
+
 void TIM3_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM3_IRQn 0 */
@@ -158,12 +196,11 @@ void TIM3_IRQHandler(void)
   uint16_t x = (highByte << 8) | lowByte;
 
 
-  for (int i = 0; i < size; i++) {
-	  int type = x < 20000 ? 1 : 2;
-	  move(type, toggledGraintsY[i], toggledGraintsX[i], i);
-  }
-  renderGraints();
-  /* USER CODE END TIM3_IRQn 1 */
+  int type = x < 20000 ? 1 : 2;
+  move(type, toggledGraintsY[current], toggledGraintsX[current], current);
+  if (current < size) current++;
+  if (current == size) current = 0;
+
 }
 void SystemClock_Config(void)
 {
@@ -300,7 +337,7 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 9600-1;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 5000-1;
+  htim3.Init.Period = 1000-1;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
