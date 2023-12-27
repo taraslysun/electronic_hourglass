@@ -1,4 +1,0 @@
-/mnt/c/Users/taras/Documents/UCU/2nd_year/1st_semester/POC/sandgrain/cmake-build-debug/CMakeFiles/sandgrain.dir
-/mnt/c/Users/taras/Documents/UCU/2nd_year/1st_semester/POC/sandgrain/cmake-build-debug/CMakeFiles/hourglass.dir
-/mnt/c/Users/taras/Documents/UCU/2nd_year/1st_semester/POC/sandgrain/cmake-build-debug/CMakeFiles/edit_cache.dir
-/mnt/c/Users/taras/Documents/UCU/2nd_year/1st_semester/POC/sandgrain/cmake-build-debug/CMakeFiles/rebuild_cache.dir
