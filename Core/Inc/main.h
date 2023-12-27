@@ -52,6 +52,22 @@ extern "C" {
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
+void FillMatrix();
+void RenderMatrix();
+
+void randomSortCurrentPositions(int positionsX[], int positionsY[], int size);
+void randomSortNextPositions(int possible_positions[][2], int size);
+
+void DrawBigX(uint16_t x, uint16_t y, uint16_t size, uint16_t thickness, uint16_t color);
+void DrawCenteredBigX(uint16_t color);
+
+void FillMatrix();
+void RenderMatrix();
+
+void NextPosition(int y, int x, int *result_y, int *result_x);
+void SetGoal(int *goal_y, int * goal_x);
+void RunEpoch();
+
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
@@ -69,6 +85,7 @@ void Error_Handler(void);
 #define DISP_MOSI_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
+
 
 /* USER CODE END Private defines */
 

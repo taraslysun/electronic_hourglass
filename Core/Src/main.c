@@ -24,18 +24,21 @@
 #include "ili9341.h"
 #include "Accelerometer.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <limits.h>
+#include <time.h>
 
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-//#define SCREEN_WIDTH 240
-//#define SCREEN_HEIGHT 320
-#define LINE_THICKNESS 10
+
+#define LINE_THICKNESS 18
+#define SCREEN_HEIGHT 320
+#define SCREEN_WIDTH 240
 
 /* USER CODE END PTD */
 
@@ -54,18 +57,23 @@ I2C_HandleTypeDef hi2c1;
 
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim4;
+
 /* USER CODE BEGIN PV */
 
-const int SCREEN_HEIGHT = 320;
-const int SCREEN_WIDTH = 240;
 int matrix[80][60];
 int goal[2] = {0, 0};
 
-int positionsX[600];
-int positionsY[600];
+int positionsX[550];
+int positionsY[550];
+
+uint16_t colors[] = {ILI9341_RED, ILI9341_GREEN, ILI9341_BLUE};
+int step = 1;
+
 
 uint16_t y = 0;
 uint16_t x = 0;
+uint16_t z = 0;
 
 /* USER CODE END PV */
 
@@ -74,13 +82,22 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void start() {
+  ILI9341_FillScreen(ILI9341_WHITE);
+  FillMatrix();
+  DrawCenteredBigX(ILI9341_BLACK);
+  RenderMatrix();
+  randomSortCurrentPositions(positionsX, positionsY, 550);
+  HAL_TIM_Base_Start_IT(&htim4);
 
+}
 
 
 void randomSortCurrentPositions(int positionsX[], int positionsY[], int size) {
@@ -123,10 +140,7 @@ void DrawBigX(uint16_t x, uint16_t y, uint16_t size, uint16_t thickness, uint16_
   for (j = 0; j < thickness; j++) {
     for (i = 0; i < size; i++) {
       ILI9341_DrawPixel(x + i, y + i + j, color);
-      if ((y + i + j)/4 >= 40) {
-    	  matrix[(y + i + j)/4-1][(x + i)/4] = 2;
-      }
-      else matrix[(y + i + j)/4][(x + i)/4] = 2;
+      matrix[(y + i + j)/4][(x + i)/4] = 2;
 
     }
   }
@@ -134,17 +148,16 @@ void DrawBigX(uint16_t x, uint16_t y, uint16_t size, uint16_t thickness, uint16_
   for (j = 0; j < thickness; j++) {
     for (i = 0; i < size; i++) {
 	  ILI9341_DrawPixel(SCREEN_WIDTH - i-1, y + i + j, color);
-	  if ((y + i + j)/4 >= 40) {
-		  matrix[(y + i + j)/4-1][(SCREEN_WIDTH - i)/4] = 2;
-	  }
-	  else matrix[(y + i + j)/4][(SCREEN_WIDTH - i)/4] = 2;
+	  matrix[(y + i + j)/4][(SCREEN_WIDTH - i)/4] = 2;
 
     }
   }
 
-  for (j = 38; j < 44; j++) {
+  for (j = 38; j < 46; j++) {
 	  for (i = 29; i < 31; i++) {
 		  matrix[j][i] = 0;
+		  matrix[j][i+3] = 2;
+		  matrix[j][i-3] = 2;
 		  ILI9341_FillRectangle(i*4, j*4, 4, 4, ILI9341_WHITE);
 	  }
   }
@@ -161,9 +174,9 @@ void DrawCenteredBigX(uint16_t color) {
 
 void FillMatrix() {
 	int idx = 0;
-	for (size_t i = 0; i < 80; i++) {
-		for (size_t j = 0; j < 60; j++) {
-			if (i < 10) {
+	for (int i = 0; i < 80; i++) {
+		for (int j = 0; j < 60; j++) {
+			if (i < 9 || (i == 9 && j > 25  && j < 36)) {
 				positionsY[idx] = i;
 				positionsX[idx] = j;
 				matrix[i][j] = 1;
@@ -177,7 +190,7 @@ void FillMatrix() {
 void RenderMatrix() {
 	for (int i = 0; i < SCREEN_HEIGHT ; i++) {
 		for (int j = 0; j < SCREEN_WIDTH; j++) {
-			if (matrix[i][j] == 1) ILI9341_FillRectangle(j*4, i*4, 4, 4, ILI9341_RED);
+			if (matrix[i][j] == 1) ILI9341_FillRectangle(j*4, i*4, 4, 4, colors[step-1]);
 			else if (matrix[i][j] == 0) ILI9341_FillRectangle(j*4, i*4, 4, 4, ILI9341_WHITE);
 		}
 	}
@@ -186,10 +199,26 @@ void RenderMatrix() {
 
 
 void SetGoal(int *goal_y, int * goal_x) {
-	y = ((ReadFromAccelerometer(0x2B) << 8) | ReadFromAccelerometer(0x2A));
 	x = ((ReadFromAccelerometer(0x29) << 8) | ReadFromAccelerometer(0x28));
+	y = ((ReadFromAccelerometer(0x2B) << 8) | ReadFromAccelerometer(0x2A));
+	z = ((ReadFromAccelerometer(0x2D) << 8) | ReadFromAccelerometer(0x2C));
+	if (z <= 20000 && z >= 14000) {
+		step++;
+		step = step > 3 ? 1 : step;
+		MX_TIM4_Init();
+		start();
+	}
 
-	if ( x < 40000 && x > 5000) {
+	if (y >= 13001 && y <=16000) {
+		*goal_y = 40;
+		*goal_x = 1;
+	}
+	else if ( y >= 49000 && y <= 55999 ) {
+		*goal_y = 40;
+		*goal_x = -1;
+	}
+
+	else if ( x < 40000 && x > 5000) {
 
 		if (y < 2000 || y > 64000) {
 			*goal_y = 105;
@@ -203,10 +232,6 @@ void SetGoal(int *goal_y, int * goal_x) {
 			*goal_y = 80;
 			*goal_x = 0;
 		}
-		else if ( y >= 50000 && y <= 55999 ) {
-			*goal_y = 40;
-			*goal_x = 1;
-		}
 
 		else if ( y >= 2000 && y <= 7000) {
 			*goal_y = 105;
@@ -216,12 +241,9 @@ void SetGoal(int *goal_y, int * goal_x) {
 			*goal_y = 80;
 			*goal_x = 60;
 		}
-		else if (y >= 13001 && y <=16000) {
-			*goal_y = 40;
-			*goal_x = -1;
-		}
 
-	} else {
+	}
+	else {
 		if ((y <= 4000 && y >= 0) || (y <= 66000 && y >= 62000) ) {
 			*goal_y = -20;
 			*goal_x = 30;
@@ -236,7 +258,7 @@ void SetGoal(int *goal_y, int * goal_x) {
 			*goal_y = 0;
 			*goal_x = 45;
 		}
-		else if (y <= 8000 && y > 4000) {
+		else if (y <= 12000 && y > 8000) {
 			*goal_y = 0;
 			*goal_x = 60;
 		}
@@ -244,29 +266,43 @@ void SetGoal(int *goal_y, int * goal_x) {
 }
 
 void NextPosition(int y, int x, int *result_y, int *result_x) {
-    int possible_positions[8][2] = {{y - 1, x}, {y - 1, x - 1}, {y - 1, x + 1},
+    int possible_positions[3][8][2] = {{{y - 1, x}, {y - 1, x - 1}, {y - 1, x + 1},
                                     {y, x - 1}, {y, x + 1}, {y + 1, x}, {y + 1, x - 1},
-									{y + 1, x + 1}};
-    randomSortNextPositions(possible_positions, 8);
+									{y + 1, x + 1}},
+    								{{y - 2, x}, {y - 2, x - 2}, {y - 2, x + 2},
+    		                        {y, x - 2}, {y, x + 2}, {y + 2, x}, {y + 2, x - 2},
+    								{y + 2, x + 2}},
+									{{y - 3, x}, {y - 3, x - 3}, {y - 3, x + 3},
+									{y, x - 3}, {y, x + 3}, {y + 3, x}, {y + 3, x - 3},
+									{y + 3, x + 3}}};
 
     int closest_pos[2] = {y, x};
-    double min_dist = (goal[0] - closest_pos[0]) * (goal[0] - closest_pos[0]) +
-    			(goal[1] - closest_pos[1]) * (goal[1] - closest_pos[1]);
-
-    for (int i = 0; i < 8; i++) {
-        int pos[2] = {possible_positions[i][0], possible_positions[i][1]};
-        if ( (pos[0] >= 0 && pos[0] < 80) && (pos[1] >= 0 && pos[1] < 60 &&
-        		matrix[pos[0]][pos[1]] == 0) ) {
-        	double dist = (goal[0] - pos[0]) * (goal[0] - pos[0]) +
-							(goal[1] - pos[1]) * (goal[1] - pos[1]);
-
-			if (dist < min_dist) {
-				min_dist = dist;
-				closest_pos[0] = pos[0];
-				closest_pos[1] = pos[1];
-			}
-        }
+    int current_goal[2] = {goal[0], goal[1]};
+    if (goal[1] == 1 || goal[1] == -1) {
+    	current_goal[0] = y > 40? 75 : 5;
+    	current_goal[1] = goal[1] * 200;
     }
+    double min_dist = (current_goal[0] - closest_pos[0]) * (current_goal[0] - closest_pos[0]) +
+    			(current_goal[1] - closest_pos[1]) * (current_goal[1] - closest_pos[1]);
+
+    for (int s = 0; s < step; s++) {
+        randomSortNextPositions(possible_positions[s], 8);
+    	for (int i = 0; i < 8; i++) {
+    		int pos[2] = {possible_positions[s][i][0], possible_positions[s][i][1]};
+    		if ( (pos[0] >= 0 && pos[0] < 80) && (pos[1] >= 0 && pos[1] < 60 &&
+    				matrix[pos[0]][pos[1]] == 0) ) {
+    			double dist = (current_goal[0] - pos[0]) * (current_goal[0] - pos[0]) +
+    							(current_goal[1] - pos[1]) * (current_goal[1] - pos[1]);
+
+    			if (dist < min_dist) {
+    				min_dist = dist;
+    				closest_pos[0] = pos[0];
+    				closest_pos[1] = pos[1];
+    			}
+    		}
+    	}
+    }
+
 
     *result_y = closest_pos[0];
     *result_x = closest_pos[1];
@@ -283,7 +319,7 @@ void RunEpoch(){
 	goal[0] = goal_y;
 	goal[1] = goal_x;
 
-	for (int i = 0; i < 600; i ++) {
+	for (int i = 0; i < 550; i ++) {
 		int y = positionsY[i];
 		int x = positionsX[i];
 		int result_y = 0;
@@ -292,7 +328,7 @@ void RunEpoch(){
 
 		if ( y != result_y || x != result_x) {
 			ILI9341_FillRectangle(x*4, y*4, 4, 4, ILI9341_WHITE);
-			ILI9341_FillRectangle(result_x*4, result_y*4, 4, 4, ILI9341_RED);
+			ILI9341_FillRectangle(result_x*4, result_y*4, 4, 4, colors[step-1]);
 			matrix[y][x] = 0;
 			matrix[result_y][result_x] = 1;
 
@@ -302,6 +338,8 @@ void RunEpoch(){
 	}
 
 }
+
+
 /* USER CODE END 0 */
 
 /**
@@ -334,17 +372,13 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   MX_I2C1_Init();
-
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   AccelerometerInit();
   HAL_Delay(100);
 
   ILI9341_Init();
-  ILI9341_FillScreen(ILI9341_WHITE);
-  FillMatrix();
-  DrawCenteredBigX(ILI9341_BLACK);
-  RenderMatrix();
-  randomSortCurrentPositions(positionsX, positionsY, 600);
+  start();
 
   /* USER CODE END 2 */
 
@@ -356,10 +390,23 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	RunEpoch();
   }
   /* USER CODE END 3 */
 }
+
+void TIM4_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM4_IRQn 0 */
+
+  /* USER CODE END TIM4_IRQn 0 */
+  RunEpoch();
+
+  HAL_TIM_IRQHandler(&htim4);
+  /* USER CODE BEGIN TIM4_IRQn 1 */
+
+  /* USER CODE END TIM4_IRQn 1 */
+}
+
 
 /**
   * @brief System Clock Configuration
@@ -475,6 +522,51 @@ static void MX_SPI1_Init(void)
   /* USER CODE BEGIN SPI1_Init 2 */
 
   /* USER CODE END SPI1_Init 2 */
+
+}
+
+/**
+  * @brief TIM4 Initialization Function
+  * @param None
+  * @retval None
+  */
+void MX_TIM4_Init(void)
+{
+
+  /* USER CODE BEGIN TIM4_Init 0 */
+
+  /* USER CODE END TIM4_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM4_Init 1 */
+
+  /* USER CODE END TIM4_Init 1 */
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 9600-1;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = step !=2 ? 100-1: 650-1;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM4_Init 2 */
+
+  /* USER CODE END TIM4_Init 2 */
 
 }
 

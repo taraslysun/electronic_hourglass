@@ -2,4 +2,4 @@
 #pragma once
 
 void AccelerometerInit();
-void GetAccelerometerValues(short* x, short* y, short* z);
+unsigned char ReadFromAccelerometer(unsigned short registerAddress);
