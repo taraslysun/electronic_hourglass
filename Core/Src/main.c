@@ -120,17 +120,17 @@ void randomSortNextPositions(int possible_positions[][2], int size) {
     srand(time(NULL));
 
     for (int i = size-1; i > 0; --i) {
-            int j = rand() % (i + 1);
+		int j = rand() % (i + 1);
 
-            int tempY = possible_positions[i][0];
-            int tempX = possible_positions[i][1];
+		int tempY = possible_positions[i][0];
+		int tempX = possible_positions[i][1];
 
-            possible_positions[i][0] = possible_positions[j][0];
-            possible_positions[i][1] = possible_positions[j][1];
+		possible_positions[i][0] = possible_positions[j][0];
+		possible_positions[i][1] = possible_positions[j][1];
 
-            possible_positions[j][0] = tempY;
-            possible_positions[j][1] = tempX;
-        }
+		possible_positions[j][0] = tempY;
+		possible_positions[j][1] = tempX;
+	}
 }
 
 
@@ -278,6 +278,8 @@ void NextPosition(int y, int x, int *result_y, int *result_x) {
 
     int closest_pos[2] = {y, x};
     int current_goal[2] = {goal[0], goal[1]};
+    randomSortNextPositions(possible_positions[0], 8);
+
     if (goal[1] == 1 || goal[1] == -1) {
     	current_goal[0] = y > 40? 75 : 5;
     	current_goal[1] = goal[1] * 200;
@@ -286,7 +288,6 @@ void NextPosition(int y, int x, int *result_y, int *result_x) {
     			(current_goal[1] - closest_pos[1]) * (current_goal[1] - closest_pos[1]);
 
     for (int s = 0; s < step; s++) {
-        randomSortNextPositions(possible_positions[s], 8);
     	for (int i = 0; i < 8; i++) {
     		int pos[2] = {possible_positions[s][i][0], possible_positions[s][i][1]};
     		if ( (pos[0] >= 0 && pos[0] < 80) && (pos[1] >= 0 && pos[1] < 60 &&
@@ -546,7 +547,7 @@ void MX_TIM4_Init(void)
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 9600-1;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = step !=2 ? 100-1: 650-1;
+  htim4.Init.Period = step !=2 ? 50-1: 650-1;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
