@@ -63,8 +63,6 @@ int goal[2] = {0, 0};
 
 int positionsX[600];
 int positionsY[600];
-//int graint_flag = 0;
-//int position_flag = 1;
 
 uint16_t y = 0;
 uint16_t x = 0;
@@ -199,11 +197,11 @@ void SetGoal(int *goal_y, int * goal_x) {
 		}
 		else if (y >= 60000 && y <= 64000) {
 			*goal_y = 105;
-			*goal_x = 45;
+			*goal_x = 15;
 		}
 		else if ( y >= 56000 && y <= 59999 ) {
 			*goal_y = 80;
-			*goal_x = 60;
+			*goal_x = 0;
 		}
 		else if ( y >= 50000 && y <= 55999 ) {
 			*goal_y = 40;
@@ -212,17 +210,36 @@ void SetGoal(int *goal_y, int * goal_x) {
 
 		else if ( y >= 2000 && y <= 7000) {
 			*goal_y = 105;
-			*goal_x = 15;
+			*goal_x = 45;
 		}
 		else if (y >= 7001 && y <=13000) {
 			*goal_y = 80;
-			*goal_x = 00;
+			*goal_x = 60;
 		}
 		else if (y >= 13001 && y <=16000) {
 			*goal_y = 40;
 			*goal_x = -1;
 		}
 
+	} else {
+		if ((y <= 4000 && y >= 0) || (y <= 66000 && y >= 62000) ) {
+			*goal_y = -20;
+			*goal_x = 30;
+		} else if (y < 62000 && y >= 58000) {
+			*goal_y = 0;
+			*goal_x = 15;
+		} else if (y < 58000 && y >= 54000) {
+			*goal_y = 0;
+			*goal_x = 0;
+		}
+		else if (y <= 8000 && y > 4000) {
+			*goal_y = 0;
+			*goal_x = 45;
+		}
+		else if (y <= 8000 && y > 4000) {
+			*goal_y = 0;
+			*goal_x = 60;
+		}
 	}
 }
 
