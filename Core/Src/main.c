@@ -279,6 +279,8 @@ void NextPosition(int y, int x, int *result_y, int *result_x) {
     int closest_pos[2] = {y, x};
     int current_goal[2] = {goal[0], goal[1]};
     randomSortNextPositions(possible_positions[0], 8);
+    if (step == 2) randomSortNextPositions(possible_positions[1], 8);
+
 
     if (goal[1] == 1 || goal[1] == -1) {
     	current_goal[0] = y > 40? 75 : 5;
@@ -547,7 +549,7 @@ void MX_TIM4_Init(void)
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 9600-1;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = step !=2 ? 50-1: 650-1;
+  htim4.Init.Period = step != 2 ? 100-1: 500-1;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
